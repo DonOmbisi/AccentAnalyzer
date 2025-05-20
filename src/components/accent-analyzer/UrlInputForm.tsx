@@ -1,11 +1,13 @@
+
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
+import { useActionState } from "react"; 
+import { useFormStatus } from "react-dom"; // Corrected import for useFormStatus
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Film, Search } from "lucide-react";
+import { Film, Search, Loader2 } from "lucide-react"; // Added Loader2
 import type { analyzeAccentAction } from "@/lib/actions"; // type import
 
 interface UrlInputFormProps {
@@ -32,12 +34,8 @@ function SubmitButton() {
   );
 }
 
-// Loader2 icon for button, not defined here, should be imported if used
-import { Loader2 } from "lucide-react";
-
-
 export function UrlInputForm({ formAction, initialState }: UrlInputFormProps) {
-  const [state, dispatch] = useFormState(formAction, initialState);
+  const [state, dispatch] = useActionState(formAction, initialState);
 
   return (
     <Card className="w-full max-w-2xl shadow-lg">
