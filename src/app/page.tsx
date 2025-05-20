@@ -1,7 +1,9 @@
+
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { useFormState, useFormStatus } from "react-dom";
+import { useEffect, useState, useRef, useActionState } from "react";
+// import { useFormState, useFormStatus } from "react-dom"; // useFormStatus is still from react-dom
+import { useFormStatus } from "react-dom";
 import { AppHeader } from "@/components/accent-analyzer/AppHeader";
 import { UrlInputForm } from "@/components/accent-analyzer/UrlInputForm";
 import { ResultsDisplay } from "@/components/accent-analyzer/ResultsDisplay";
@@ -13,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 const initialState: { result?: AnalysisResult; error?: string; fieldErrors?: { videoUrl?: string[] } } = {};
 
 export default function AccentAnalyzerPage() {
-  const [state, formAction] = useFormState(analyzeAccentAction, initialState);
+  const [state, formAction] = useActionState(analyzeAccentAction, initialState);
   const [isLoading, setIsLoading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const { toast } = useToast();
@@ -66,7 +68,7 @@ export default function AccentAnalyzerPage() {
     setIsLoading(false);
     formSubmittedRef.current = false;
     // Reset form state if possible - typically by resetting the key of the form or programmatically
-    // For useFormState, typically we'd want to clear the `state` too, but that's managed by `formAction`.
+    // For useActionState, typically we'd want to clear the `state` too, but that's managed by `formAction`.
     // We can reset the visual input by manipulating the form element if needed, or rely on new submission.
     // For now, just clearing the result is the main goal.
     // A better reset would involve re-initializing the form state itself if UrlInputForm holds its own input state.
