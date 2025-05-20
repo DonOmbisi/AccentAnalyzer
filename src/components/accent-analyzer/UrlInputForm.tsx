@@ -1,18 +1,18 @@
 
 "use client";
 
-import { useActionState } from "react"; 
-import { useFormStatus } from "react-dom"; // Corrected import for useFormStatus
+import { useFormStatus } from "react-dom"; // useFormStatus is for the submit button pending state
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Film, Search, Loader2 } from "lucide-react"; // Added Loader2
-import type { analyzeAccentAction } from "@/lib/actions"; // type import
+import { Film, Search, Loader2 } from "lucide-react";
 
+// The formAction prop is now (formData: FormData) => void
+// The serverState is the state from the parent's useActionState, containing results or errors
 interface UrlInputFormProps {
-  formAction: typeof analyzeAccentAction;
-  initialState: { error?: string; fieldErrors?: { videoUrl?: string[] } };
+  formAction: (formData: FormData) => void;
+  serverState: { result?: any; error?: string; fieldErrors?: { videoUrl?: string[] } };
 }
 
 function SubmitButton() {
@@ -34,9 +34,8 @@ function SubmitButton() {
   );
 }
 
-export function UrlInputForm({ formAction, initialState }: UrlInputFormProps) {
-  const [state, dispatch] = useActionState(formAction, initialState);
-
+export function UrlInputForm({ formAction, serverState }: UrlInputFormProps) {
+  // No local useActionState. Errors and results are handled by the parent via serverState.
   return (
     <Card className="w-full max-w-2xl shadow-lg">
       <CardHeader>
@@ -49,7 +48,8 @@ export function UrlInputForm({ formAction, initialState }: UrlInputFormProps) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form action={dispatch} className="space-y-6">
+        {/* The form's action prop directly takes the passed `formAction` */}
+        <form action={formAction} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="videoUrl" className="text-base">Video URL</Label>
             <Input
@@ -60,16 +60,20 @@ export function UrlInputForm({ formAction, initialState }: UrlInputFormProps) {
               required
               className="text-base"
               aria-describedby="videoUrlError"
+              // To clear input on successful submission or reset, this could be a controlled component
+              // or the form could be reset by changing its key in the parent.
             />
-            {state?.fieldErrors?.videoUrl && (
+            {/* Display field-specific errors from serverState passed from parent */}
+            {serverState?.fieldErrors?.videoUrl && (
               <p id="videoUrlError" className="text-sm text-destructive">
-                {state.fieldErrors.videoUrl.join(", ")}
+                {serverState.fieldErrors.videoUrl.join(", ")}
               </p>
             )}
           </div>
           <SubmitButton />
-           {state?.error && !state?.fieldErrors && (
-            <p className="text-sm text-destructive mt-2">{state.error}</p>
+          {/* Display general error from serverState */}
+          {serverState?.error && !serverState?.fieldErrors && (
+            <p className="text-sm text-destructive mt-2">{serverState.error}</p>
           )}
         </form>
       </CardContent>

@@ -1,9 +1,9 @@
 
 "use client";
 
-import { useEffect, useState, useRef, useActionState } from "react";
-// import { useFormState, useFormStatus } from "react-dom"; // useFormStatus is still from react-dom
-import { useFormStatus } from "react-dom";
+import { useEffect, useState, useRef } from "react";
+import { useActionState } from "react"; // Correct import for useActionState
+// useFormStatus is correctly imported in UrlInputForm where it's used
 import { AppHeader } from "@/components/accent-analyzer/AppHeader";
 import { UrlInputForm } from "@/components/accent-analyzer/UrlInputForm";
 import { ResultsDisplay } from "@/components/accent-analyzer/ResultsDisplay";
@@ -15,83 +15,66 @@ import { useToast } from "@/hooks/use-toast";
 const initialState: { result?: AnalysisResult; error?: string; fieldErrors?: { videoUrl?: string[] } } = {};
 
 export default function AccentAnalyzerPage() {
-  const [state, formAction] = useActionState(analyzeAccentAction, initialState);
-  const [isLoading, setIsLoading] = useState(false);
+  // serverActionFormDispatch is the function to be called by the form.
+  // state is the result of the action.
+  const [state, serverActionFormDispatch] = useActionState(analyzeAccentAction, initialState);
+  const [isLoading, setIsLoading] = useState(false); // For UI feedback during submission
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const { toast } = useToast();
   
-  // Ref to track if form submission is occurring, to distinguish from initial load
+  // Ref to track if form submission has been initiated.
   const formSubmittedRef = useRef(false);
 
-  // Effect to handle form submission status (loading state)
-  // This requires a way to know when useFormStatus().pending changes.
-  // A common pattern is to manage isLoading based on the form submission starting and `state` updating.
-  // Since useFormStatus can only be used in components rendered by the form, 
-  // we can infer loading if formSubmittedRef is true and state hasn't updated yet, or use a state variable in UrlInputForm.
-  // For simplicity, we'll manage a general isLoading triggered by form submission intention.
-
+  // This effect reacts to the state changes from useActionState
   useEffect(() => {
-    if (formSubmittedRef.current) { // Only process if form was actually submitted
-      setIsLoading(false); // Stop loading once state updates
+    if (formSubmittedRef.current) { // Only act if a submission was made
+      setIsLoading(false); // Action finished, stop loading
+
       if (state.result) {
         setAnalysisResult(state.result);
         toast({
           title: "Analysis Successful!",
           description: `Detected accent: ${state.result.accent}`,
         });
-      } else if (state.error && !state.fieldErrors) {
-        setAnalysisResult(null); // Clear previous results on error
+      } else if (state.error || state.fieldErrors) { // Check for any error
+        setAnalysisResult(null);
         toast({
-          title: "Analysis Failed",
-          description: state.error,
-          variant: "destructive",
-        });
-      } else if (state.fieldErrors?.videoUrl) {
-         setAnalysisResult(null); // Clear previous results on field error
-         toast({
-          title: "Invalid Input",
-          description: state.fieldErrors.videoUrl.join(", "),
+          title: state.fieldErrors ? "Invalid Input" : "Analysis Failed",
+          description: state.fieldErrors?.videoUrl?.join(", ") || state.error || "An unknown error occurred.",
           variant: "destructive",
         });
       }
+      formSubmittedRef.current = false; // Reset ref for the next submission
     }
   }, [state, toast]);
-
-  const handleFormSubmit = async (formData: FormData) => {
+  
+  // Wrapper to set loading state and track submission before calling the server action dispatcher.
+  // This is what the form will call.
+  const formActionWithLoading = (formData: FormData) => {
     setIsLoading(true);
-    formSubmittedRef.current = true; // Mark that a submission attempt is happening
-    // The formAction will be called by the form's native submission
+    formSubmittedRef.current = true; // Mark that a submission is in progress
+    serverActionFormDispatch(formData); // Call the dispatcher from useActionState
   };
   
   const handleReset = () => {
     setAnalysisResult(null);
     setIsLoading(false);
     formSubmittedRef.current = false;
-    // Reset form state if possible - typically by resetting the key of the form or programmatically
-    // For useActionState, typically we'd want to clear the `state` too, but that's managed by `formAction`.
-    // We can reset the visual input by manipulating the form element if needed, or rely on new submission.
-    // For now, just clearing the result is the main goal.
-    // A better reset would involve re-initializing the form state itself if UrlInputForm holds its own input state.
-    // If UrlInputForm is purely controlled by `react-dom` form state, this is harder.
-    // Let's assume a new analysis will overwrite.
+    // Consider re-keying UrlInputForm or adding a programmatic reset to clear its input
+    // and resetting `state` by calling `serverActionFormDispatch` with a special payload
+    // if `useActionState` supported resetting to initial state easily.
+    // For now, this mainly clears the results view.
   };
-
-  // This wrapper for formAction is to set loading state
-  // when the form is submitted via its 'action' prop directly.
-  const wrappedFormAction = (currentState: any, formData: FormData) => {
-    setIsLoading(true);
-    formSubmittedRef.current = true;
-    return formAction(currentState, formData);
-  };
-
 
   return (
     <div className="flex flex-col items-center min-h-screen p-4 sm:p-8 bg-background font-sans">
       <AppHeader />
       <main className="w-full flex flex-col items-center">
         {!analysisResult && !isLoading && (
-           // Pass wrappedFormAction to UrlInputForm
-          <UrlInputForm formAction={wrappedFormAction} initialState={initialState} />
+          <UrlInputForm 
+            formAction={formActionWithLoading} // Pass the wrapper
+            serverState={state} // Pass the server state for displaying errors
+          />
         )}
         {isLoading && <LoadingIndicator />}
         {!isLoading && analysisResult && (
